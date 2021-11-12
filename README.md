@@ -1,4 +1,7 @@
+
 # Quadratic Voting
+
+![sample](https://user-images.githubusercontent.com/274897/141509425-29a7fe8d-2e14-4c60-b925-ee08aea1177d.gif)
 
 ## Overview
 
