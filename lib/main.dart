@@ -1,96 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:get/get.dart';
 import 'dart:math';
+import 'package:flutter/services.dart' show rootBundle;
 
-class Candidate {
-  Candidate({
-    required this.name,
-    required this.count,
-  });
-
-  final String name;
-  final int count;
-}
-
-class CandidateList extends StateNotifier<List<Candidate>> {
-  CandidateList(this.ref) : super([]);
-
-  final Ref ref;
-
-  int? operator [](String? key) {
-    return state.firstWhere((c) => c.name == key).count;
+class PointController extends GetxController {
+  PointController(List<String> list) {
+    for (var c in list) {
+      candidates[c] = 0;
+    }
   }
 
-  void operator []=(String key, int value) {
-    state = [
-      for (final c in state)
-        if (c.name == key) Candidate(name: c.name, count: value) else c,
-    ];
-  }
-
-  void setCandidate(List<String> keys) {
-    state = keys.map((k) => Candidate(name: k, count: 0)).toList();
-  }
+  RxInt point = RxInt(99);
+  final candidates = RxMap();
 
   void inc(String key) {
-    int point = ref.read(pointProvider);
-    int v = state.firstWhere((c) => c.name == key).count;
+    int v = candidates[key];
     int diff = pow(v + 1, 2) - pow(v, 2) as int;
 
     if (point >= diff) {
-      ref.read(pointProvider.state).state -= diff;
-      this[key] = v + 1;
+      point -= diff;
+      candidates[key] = v + 1;
     }
   }
 
   void dec(String key) {
-    int v = state.firstWhere((c) => c.name == key).count;
+    int v = candidates[key];
 
     if (v <= 0) return;
 
     int diff = pow(v, 2) - pow(v - 1, 2) as int;
 
-    ref.read(pointProvider.state).state += diff;
-    this[key] = v - 1;
+    point += diff;
+    candidates[key] = v - 1;
   }
 }
-
-final pointProvider = StateProvider((ref) => 99);
-final candidateProvider = StateNotifierProvider<CandidateList, List<Candidate>>(
-    (ref) => CandidateList(ref));
-
-final List<String> candidatesList = [];
 
 void main() async {
-  // read candidate list
   WidgetsFlutterBinding.ensureInitialized();
-  (await rootBundle.loadString("assets/candidate.txt"))
-      .split("\n")
-      .forEach((d) => candidatesList.add(d));
-  candidatesList.shuffle();
+  List<String> clist =
+      (await rootBundle.loadString("assets/candidate.txt")).split("\n");
+  Get.put(PointController(clist));
 
-  runApp(
-    const ProviderScope(child: MyApp()),
-  );
+  runApp(const GetMaterialApp(home: Home()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(home: Home());
-  }
-}
-
-class CandidatesView extends HookConsumerWidget {
+class CandidatesView extends StatelessWidget {
   const CandidatesView({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final candidates = ref.watch(candidateProvider.notifier);
+  Widget build(BuildContext context) {
+    final PointController pc = Get.find();
 
     Widget _trailing(String k) {
       return SizedBox(
@@ -100,16 +59,13 @@ class CandidatesView extends HookConsumerWidget {
             IconButton(
                 icon: const Icon(Icons.remove),
                 onPressed: () {
-                  candidates.dec(k);
+                  pc.dec(k);
                 }),
-            HookConsumer(builder: (context, ref, _) {
-              final c = ref.watch(candidateProvider);
-              return Text('${c.firstWhere((n) => n.name == k).count}');
-            }),
+            Obx(() => Text("${pc.candidates[k]}")),
             IconButton(
                 icon: const Icon(Icons.add),
                 onPressed: () {
-                  candidates.inc(k);
+                  pc.inc(k);
                 })
           ],
         ),
@@ -132,21 +88,21 @@ class CandidatesView extends HookConsumerWidget {
         child: ListView.builder(
           shrinkWrap: true,
           itemBuilder: (BuildContext context, int index) {
-            final k = candidatesList[index];
+            final k = pc.candidates.keys.elementAt(index);
 
             return _makeTile(k);
           },
-          itemCount: candidatesList.length,
+          itemCount: pc.candidates.length,
         ));
   }
 }
 
-class Home extends HookConsumerWidget {
+class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.read(candidateProvider.notifier).setCandidate(candidatesList);
+  Widget build(context) {
+    final PointController pc = Get.find();
     final TextEditingController _controller = TextEditingController();
 
     return Scaffold(
@@ -156,21 +112,18 @@ class Home extends HookConsumerWidget {
           child: SingleChildScrollView(
               child: Column(
             children: [
-              HookConsumer(builder: (context, ref, _) {
-                final point = ref.watch(pointProvider);
-                return Text('Total Point:$point');
-              }),
+              Obx(() => Text("Total Point:${pc.point}")),
               Row(
                 children: [
                   Flexible(
                     child: TextField(
-                      controller: _controller,
-                      decoration: const InputDecoration(
+                        controller: _controller,
+                        decoration: const InputDecoration(
                           border: UnderlineInputBorder(),
-                          hintText: "Enter your id"),
-                    ),
+                          hintText: "Enter your id",
+                        )),
                   ),
-                  ElevatedButton(onPressed: () {}, child: const Text("Submit"))
+                  ElevatedButton(onPressed: () {}, child: const Text("Submit")),
                 ],
               ),
               const CandidatesView(),
