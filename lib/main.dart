@@ -103,7 +103,7 @@ class Home extends StatelessWidget {
   @override
   Widget build(context) {
     final PointController pc = Get.find();
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
 
     return Scaffold(
         appBar: AppBar(title: const Text('Whats your favorite language')),
@@ -117,7 +117,7 @@ class Home extends StatelessWidget {
                 children: [
                   Flexible(
                     child: TextField(
-                        controller: _controller,
+                        controller: controller,
                         decoration: const InputDecoration(
                           border: UnderlineInputBorder(),
                           hintText: "Enter your id",
