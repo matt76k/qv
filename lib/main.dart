@@ -13,6 +13,11 @@ class PointController extends GetxController {
   RxInt point = RxInt(99);
   final candidates = RxMap();
 
+  void clear() {
+    candidates.updateAll((key, value) => 0);
+    point.value = 99;
+  }
+
   void inc(String key) {
     int v = candidates[key];
     int diff = pow(v + 1, 2) - pow(v, 2) as int;
@@ -39,6 +44,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   List<String> clist =
       (await rootBundle.loadString("assets/candidate.txt")).split("\n");
+  clist.shuffle();
   Get.put(PointController(clist));
 
   runApp(const GetMaterialApp(home: Home()));
@@ -100,13 +106,19 @@ class CandidatesView extends StatelessWidget {
 class Home extends StatelessWidget {
   const Home({Key? key}) : super(key: key);
 
+  Future<String> submit(String id, String postdata) async {
+    return postdata;
+  }
+
   @override
   Widget build(context) {
+    const String title = "Whats your favorite language";
+
     final PointController pc = Get.find();
     final TextEditingController controller = TextEditingController();
 
     return Scaffold(
-        appBar: AppBar(title: const Text('Whats your favorite language')),
+        appBar: AppBar(title: const Text(title)),
         body: Container(
           margin: const EdgeInsets.fromLTRB(10, 10, 10, 10),
           child: SingleChildScrollView(
@@ -123,7 +135,29 @@ class Home extends StatelessWidget {
                           hintText: "Enter your id",
                         )),
                   ),
-                  ElevatedButton(onPressed: () {}, child: const Text("Submit")),
+                  ElevatedButton(
+                      onPressed: () async {
+                        String post = "";
+                        pc.candidates.forEach((key, value) {
+                          if (value != 0) {
+                            post += "${key.trim()}:$value, ";
+                          }
+                        });
+                        String res = await submit(controller.text, post);
+                        Get.dialog(AlertDialog(
+                          title: const Text(title),
+                          content: Text(res),
+                          actions: [
+                            TextButton(
+                                onPressed: () {
+                                  pc.clear();
+                                  Get.back();
+                                },
+                                child: const Text("Close")),
+                          ],
+                        ));
+                      },
+                      child: const Text("Submit")),
                 ],
               ),
               const CandidatesView(),
